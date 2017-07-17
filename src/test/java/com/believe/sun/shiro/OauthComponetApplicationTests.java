@@ -1,4 +1,4 @@
-package com.believe.sun;
+package com.believe.sun.shiro;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
