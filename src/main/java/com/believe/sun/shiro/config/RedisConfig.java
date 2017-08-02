@@ -1,7 +1,9 @@
 package com.believe.sun.shiro.config;
 
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.shiro.session.Session;
+import org.aspectj.lang.annotation.Before;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -28,14 +30,14 @@ import java.net.UnknownHostException;
 //@EnableRedisRepositories(basePackages = "com.believe.sun.dao",enableKeyspaceEvents = RedisKeyValueAdapter.EnableKeyspaceEvents.ON_STARTUP)
 public class RedisConfig {
 
+
     @Bean
     @Primary
-    public  RedisTemplate<String,Object> redisTemplate(
-            RedisConnectionFactory redisConnectionFactory)
-            throws UnknownHostException {
-        RedisTemplate<String , Object> template = new RedisTemplate<>();
-        template.setHashKeySerializer(new StringRedisSerializer());
-        template.setKeySerializer(new StringRedisSerializer());
+    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory redisConnectionFactory) throws UnknownHostException {
+        StringRedisSerializer stringRedisSerializer = new StringRedisSerializer();
+        RedisTemplate<String, Object> template = new RedisTemplate<>();
+        template.setHashKeySerializer(stringRedisSerializer);
+        template.setKeySerializer(stringRedisSerializer);
         template.setConnectionFactory(redisConnectionFactory);
         return template;
     }

@@ -1,5 +1,6 @@
 package com.believe.sun.shiro.dao;
 
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.shiro.session.Session;
 import org.apache.shiro.session.UnknownSessionException;
 import org.apache.shiro.session.mgt.eis.AbstractSessionDAO;
@@ -65,7 +66,7 @@ public class RedisSessionDao extends AbstractSessionDAO{
 
     @Override
     public void delete(Session session) {
-        String key = this.sessionKeyPrefix+":"+session.getId();
+        String key = this.sessionKeyPrefix+":"+DigestUtils.md5Hex(session.getId().toString());
         redisTemplate.delete(key);
     }
 
@@ -83,7 +84,7 @@ public class RedisSessionDao extends AbstractSessionDAO{
     private Session save(Session s) {
         long timeout = s.getTimeout();
         ValueOperations<String, Object> operations = redisTemplate.opsForValue();
-        String key = this.sessionKeyPrefix+":"+s.getId();
+        String key = this.sessionKeyPrefix+":"+ DigestUtils.md5Hex(s.getId().toString());
         operations.set(key,s,timeout, TimeUnit.MILLISECONDS);
         Serializable principal = (Serializable) s.getAttribute(DefaultSubjectContext.PRINCIPALS_SESSION_KEY);
         if(principal != null){
@@ -96,7 +97,7 @@ public class RedisSessionDao extends AbstractSessionDAO{
 
 
     private Session findOne(String s) {
-        String key = this.sessionKeyPrefix+":"+s;
+        String key = this.sessionKeyPrefix+":"+DigestUtils.md5Hex(s);
         ValueOperations objectObjectValueOperations = redisTemplate.opsForValue();
         return  (Session) objectObjectValueOperations.get(key);
     }

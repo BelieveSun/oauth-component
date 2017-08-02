@@ -1,31 +1,54 @@
 package com.believe.sun.shiro.filters;
 
+import com.believe.sun.shiro.RoleType;
 import com.believe.sun.shiro.authc.OauthToken;
+import com.believe.sun.shiro.dao.RedisCacheManager;
+import com.believe.sun.shiro.modle.CurrentUser;
 import com.believe.sun.shiro.service.UserService;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.authc.UnknownAccountException;
+import org.apache.shiro.cache.Cache;
+import org.apache.shiro.session.Session;
 import org.apache.shiro.subject.Subject;
 import org.apache.shiro.web.filter.AccessControlFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by sungj on 17-7-10.
  */
+@Component
 public class UserFilter extends MethodFilter {
 
     private static Logger logger = LoggerFactory.getLogger(UserFilter.class);
 
-    private UserService userService;
+    private final UserService userService;
 
-    public UserFilter(UserService userService) {
+    private final RedisTemplate<String,Object> redisTemplate;
+
+    @Value("${shiro.user.prefix}")
+    private String userPrefix;
+
+    @Autowired
+    public UserFilter(UserService userService,RedisTemplate<String,Object> redisTemplate) {
         this.userService = userService;
+        this.redisTemplate = redisTemplate;
     }
 
     @Override
@@ -67,12 +90,27 @@ public class UserFilter extends MethodFilter {
             return true;
         } else {
             Subject subject = getSubject(request, response);
-            boolean isService = subject.hasRole("ROLE_SERVICE");
+            boolean isService = subject.hasRole(RoleType.ROLE_SERVICE.toString());
             // If principal is not null, then the user is known and should be allowed access.
             String principal = (String) subject.getPrincipal();
-            if(principal != null){
+            Boolean cache = false;
+            if(mappedValue != null){
+                for(String v:(String [])mappedValue){
+                    if("cache".equals(v)){
+                        cache = true;
+                    }
+                }
+            }
+            if(principal != null && cache){
                 try {
-                    userService.cacheUser(principal,isService);
+                    Session session = subject.getSession(false);
+                    String key = this.userPrefix+":"+principal;
+                    CurrentUser user = (CurrentUser) redisTemplate.opsForValue().get(key);
+                    if(user == null){
+                        user = userService.getUser(principal, isService);
+                        redisTemplate.opsForValue().set(key,user,session.getTimeout(), TimeUnit.MILLISECONDS);
+                    }
+                    request.setAttribute("user",user);
                 } catch (Exception e) {
                     logger.error("cache user : {} failed ! Exception : {}",principal,e);
                 }

@@ -10,8 +10,8 @@ import java.lang.annotation.*;
 @Documented
 public @interface CacheValue {
     /**
-     * Get value from cache ,default value is "shiro:user:prefix";
+     * Get value from cache ,default value is "";
      * @return
      */
-    String value() default "shiro:user:prefix";
+    String value() default "user";
 }

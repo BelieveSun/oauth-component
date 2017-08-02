@@ -12,5 +12,7 @@ public interface UserService {
 
     CurrentUser getUser(String username);
 
-    void cacheUser(String username,boolean isService);
+    CurrentUser getServer(String clientId);
+
+    CurrentUser getUser(String username,boolean isService);
 }

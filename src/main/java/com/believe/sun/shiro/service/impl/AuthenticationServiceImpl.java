@@ -4,6 +4,7 @@ import com.believe.sun.shiro.dao.RedisCacheManager;
 import com.believe.sun.shiro.service.AuthenticationService;
 import net.dongliu.requests.Requests;
 import net.dongliu.requests.Response;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.shiro.cache.Cache;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -94,7 +95,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         String url = authenticationServer+"/oauth/check_token";
         logger.info("Validate Token,url :{} ,token: {}",url,token);
 
-        String key = this.tokenPrefix+":"+token;
+        String key = this.tokenPrefix+":"+ DigestUtils.md5Hex(token);
         if(redisTemplate.hasKey(key)){
             redisTemplate.expire(key,timeout,TimeUnit.MILLISECONDS);
             return (String) redisTemplate.opsForValue().get(key);

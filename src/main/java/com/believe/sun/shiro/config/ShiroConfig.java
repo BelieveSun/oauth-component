@@ -1,5 +1,6 @@
 package com.believe.sun.shiro.config;
 
+import com.believe.sun.shiro.dao.RedisCacheManager;
 import com.believe.sun.shiro.filters.HttpMethodPermissionFilter;
 import com.believe.sun.shiro.filters.PermissionsAuthorizationFilter;
 import com.believe.sun.shiro.filters.RoleAuthorizationFilter;
@@ -22,10 +23,12 @@ import org.apache.shiro.util.PatternMatcher;
 import org.apache.shiro.web.mgt.DefaultWebSecurityManager;
 import org.apache.shiro.web.session.mgt.DefaultWebSessionManager;
 import org.apache.shiro.mgt.SecurityManager;
+import org.aspectj.lang.annotation.Before;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.*;
 
 import javax.servlet.Filter;
@@ -53,9 +56,6 @@ public class ShiroConfig {
 
     @Autowired
     private PatternMatcher patternMatcher;
-
-    @Autowired
-    private UserService userService;
 
     @Bean
     public ModularRealmAuthenticator modularRealmAuthenticator(){
@@ -98,13 +98,20 @@ public class ShiroConfig {
         return new AntPathMatcher();
     }
 
+    @Bean
+    public FilterRegistrationBean filterRegistrationBean(UserFilter userFilter){
+        FilterRegistrationBean bean = new FilterRegistrationBean(userFilter);
+        bean.setEnabled(false);
+        return bean;
+    }
+
     @Bean("shiroFilter")
-    public ShiroFilterFactoryBean shiroFilterFactoryBean(SecurityManager securityManager) throws Exception {
+    public ShiroFilterFactoryBean shiroFilterFactoryBean(SecurityManager securityManager,UserFilter userFilter) throws Exception {
         ShiroFilterFactoryBean shiroFilterFactoryBean = new OauthShiroFilterFactoryBean(patternMatcher);
         shiroFilterFactoryBean.setSecurityManager(securityManager);
         // todo: set local filters
         Map<String,Filter> filters = new HashMap<>();
-        filters.put("user",new UserFilter(userService));
+        filters.put("user",userFilter);
         filters.put("roles",new RoleAuthorizationFilter());
         filters.put("perms",new PermissionsAuthorizationFilter());
         filters.put("rest",new HttpMethodPermissionFilter());

@@ -1,9 +1,14 @@
 package com.believe.sun.shiro.modle;
 
+import java.io.Serializable;
+
 /**
  * Created by sungj on 17-7-21.
  */
-public class CurrentUser {
+public class CurrentUser implements Serializable{
+
+
+    private static final long serialVersionUID = -4255846419072319450L;
 
     private Integer id;
 
