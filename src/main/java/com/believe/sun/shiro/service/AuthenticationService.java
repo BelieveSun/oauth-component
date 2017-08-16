@@ -7,4 +7,6 @@ public interface AuthenticationService {
     String requestToken(String principal,String credentials,String grantType);
 
     String validateToken(String token);
+
+    void removeToken(String token);
 }

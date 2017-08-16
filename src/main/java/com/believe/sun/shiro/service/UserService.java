@@ -15,4 +15,6 @@ public interface UserService {
     CurrentUser getServer(String clientId);
 
     CurrentUser getUser(String username,boolean isService);
+
+    Set<String> getUserRole(String username);
 }

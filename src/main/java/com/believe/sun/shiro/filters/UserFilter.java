@@ -12,6 +12,7 @@ import org.apache.shiro.cache.Cache;
 import org.apache.shiro.session.Session;
 import org.apache.shiro.subject.Subject;
 import org.apache.shiro.web.filter.AccessControlFilter;
+import org.apache.shiro.web.util.WebUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -101,18 +102,20 @@ public class UserFilter extends MethodFilter {
                     }
                 }
             }
-            if(principal != null && cache){
-                try {
-                    Session session = subject.getSession(false);
-                    String key = this.userPrefix+":"+principal;
-                    CurrentUser user = (CurrentUser) redisTemplate.opsForValue().get(key);
-                    if(user == null){
-                        user = userService.getUser(principal, isService);
-                        redisTemplate.opsForValue().set(key,user,session.getTimeout(), TimeUnit.MILLISECONDS);
+            if(principal != null ){
+                if(cache){
+                    try {
+                        Session session = subject.getSession(false);
+                        String key = this.userPrefix+":"+principal;
+                        CurrentUser user = (CurrentUser) redisTemplate.opsForValue().get(key);
+                        if(user == null){
+                            user = userService.getUser(principal, isService);
+                            redisTemplate.opsForValue().set(key,user,session.getTimeout(), TimeUnit.MILLISECONDS);
+                        }
+                        request.setAttribute("user",user);
+                    } catch (Exception e) {
+                        logger.error("cache user : {} failed ! Exception : {}",principal,e);
                     }
-                    request.setAttribute("user",user);
-                } catch (Exception e) {
-                    logger.error("cache user : {} failed ! Exception : {}",principal,e);
                 }
                 return true;
             }
@@ -120,14 +123,14 @@ public class UserFilter extends MethodFilter {
         }
     }
 
-    /**
-     * This default implementation simply calls
-     * {@link #saveRequestAndRedirectToLogin(javax.servlet.ServletRequest, javax.servlet.ServletResponse) saveRequestAndRedirectToLogin}
-     * and then immediately returns <code>false</code>, thereby preventing the chain from continuing so the redirect may
-     * execute.
-     */
-    protected boolean onAccessDenied(ServletRequest request, ServletResponse response) throws IOException{
-        saveRequestAndRedirectToLogin(request, response);
+
+    protected boolean onAccessDenied(ServletRequest request, ServletResponse response) {
+        try {
+            WebUtils.toHttp(response).sendError(401);
+        } catch (IOException var4) {
+            var4.printStackTrace();
+        }
+
         return false;
     }
 

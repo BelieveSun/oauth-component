@@ -1,14 +1,10 @@
 package com.believe.sun.shiro.service.impl;
 
-import com.believe.sun.shiro.RoleType;
 import com.believe.sun.shiro.modle.CurrentUser;
 import com.believe.sun.shiro.service.AuthenticationService;
 import com.believe.sun.shiro.service.UserService;
-import io.swagger.annotations.ApiOperation;
 import net.dongliu.requests.Requests;
 import net.dongliu.requests.Response;
-import org.apache.shiro.SecurityUtils;
-import org.apache.shiro.subject.Subject;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -43,9 +39,9 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public Set<String> getUserPermission(String username) {
-        String url = userServer+"/users/"+username+"/permissions";
+        String url = userServer+"/users/permissions";
         logger.info("Get {} permissions,Url: {} ",username,url);
-        Response<String> response = Requests.get(url).verify(false).text();
+        Response<String> response = Requests.get(url).addParam("username",username).verify(false).text();
         if(response.getStatusCode() == 200){
             try {
                 JSONObject jsonObject = new JSONObject(response.getBody());
@@ -122,5 +118,29 @@ public class UserServiceImpl implements UserService {
         }else {
             return getUser(username);
         }
+    }
+
+    @Override
+    public Set<String> getUserRole(String username) {
+        String url = userServer+"/users/roles";
+        logger.info("Get user {} info,Url: {} ",username,url);
+        Response<String> response = Requests.get(url).addParam("username",username).verify(false).text();
+        if(response.getStatusCode() == 200){
+            try {
+                JSONObject jsonObject = new JSONObject(response.getBody());
+                JSONArray data = jsonObject.getJSONArray("data");
+                Set<String> roles = new HashSet<>();
+                for (int i = 0; i < data.length(); i ++){
+                    String role = data.getString(i);
+                    roles.add(role);
+                }
+                return roles;
+            } catch (JSONException e) {
+                logger.error("Get user {} info failed ! Error parsing response body {}. Exception: {}",username,response.getBody(),e);
+            } catch (Exception e){
+                logger.error("Get user {} info failed ! Exception: {}",username,e);
+            }
+        }
+        return null;
     }
 }

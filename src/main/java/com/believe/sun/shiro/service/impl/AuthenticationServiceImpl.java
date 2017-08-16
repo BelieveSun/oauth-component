@@ -1,11 +1,10 @@
 package com.believe.sun.shiro.service.impl;
 
-import com.believe.sun.shiro.dao.RedisCacheManager;
 import com.believe.sun.shiro.service.AuthenticationService;
+import com.believe.sun.shiro.service.UserService;
 import net.dongliu.requests.Requests;
 import net.dongliu.requests.Response;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.shiro.cache.Cache;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -16,8 +15,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -38,6 +37,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private String tokenPrefix;
     @Value("${shiro.timeout}")
     private Long timeout;
+    @Autowired
+    private UserService userService;
 
     @Autowired
     private RedisTemplate<String,Object> redisTemplate;
@@ -110,14 +111,20 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             try {
                 JSONObject jsonObject = new JSONObject(response.getBody());
                 JSONArray scope = jsonObject.getJSONArray("scope");
-                Long exp = jsonObject.getLong("exp");
-                JSONArray authorities = jsonObject.getJSONArray("authorities");
-                String principal = jsonObject.getString("client_id");
-                List<String> list = new ArrayList<>();
-                for (int i = 0; i < authorities.length(); i++) {
-                    list.add(authorities.getString(i));
+                if(jsonObject.has("exp")) {
+                    Long exp = jsonObject.getLong("exp");
                 }
-                String roles = String.join(",", list);
+                JSONArray authorities = jsonObject.getJSONArray("authorities");
+                Set<String> rolesSet = new HashSet<>();
+                for (int i = 0; i < authorities.length(); i++) {
+                    rolesSet.add(authorities.getString(i));
+                }
+                String principal = jsonObject.getString("client_id");
+                if(jsonObject.has("username")){
+                    String username = jsonObject.getString("username");
+                    rolesSet = userService.getUserRole(username);
+                }
+                String roles = String.join(",", rolesSet);
                 redisTemplate.opsForValue().set(key,roles,timeout,TimeUnit.MILLISECONDS);
                 return roles;
             } catch (JSONException e) {
@@ -125,5 +132,28 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             }
         }
         return null;
+    }
+
+    @Override
+    public void removeToken(String token) {
+        String key = this.tokenPrefix+":"+ DigestUtils.md5Hex(token);
+        redisTemplate.delete(key);
+        String url = authenticationServer+"/oauth/token/remove";
+        Response<String> response = Requests.delete(url).addHeader("Authorization", "Bearer " + token).verify(false).text();
+        if(response.getStatusCode() != 200) {
+            logger.error("remove Token failed ! Unexpected status code : {} . Response body : {}",
+                    response.getStatusCode(), response.getBody());
+        }else {
+            try {
+                JSONObject jsonObject = new JSONObject(response.getBody());
+                int error = jsonObject.getInt("error");
+                if(error != 0) {
+                    String message = jsonObject.getString("message");
+                    logger.error("remove Token failed ! errorCode :{} ,message :{}",error,message);
+                }
+            } catch (JSONException e) {
+                logger.error("remove Token failed !",e);
+            }
+        }
     }
 }

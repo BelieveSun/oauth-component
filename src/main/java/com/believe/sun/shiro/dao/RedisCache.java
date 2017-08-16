@@ -44,6 +44,9 @@ public class RedisCache<K,V> implements Cache<K,V> {
 
     @Override
     public V get(K key) throws CacheException {
+        if(key == null){
+            return null;
+        }
         String k = getKey(key);
         try {
             ValueOperations valueOperations = redisTemplate.opsForValue();
@@ -57,6 +60,9 @@ public class RedisCache<K,V> implements Cache<K,V> {
     @Override
     public V put(K key, V value) throws CacheException {
         try {
+            if(key == null){
+                return null;
+            }
             String k = getKey(key);
             redisTemplate.opsForValue().set(k,value);
             return value;
@@ -69,6 +75,9 @@ public class RedisCache<K,V> implements Cache<K,V> {
     @Override
     public V remove(K key) throws CacheException {
         try {
+            if(key == null){
+                return null;
+            }
             String k = getKey(key);
             V value = (V) redisTemplate.opsForValue().get(k);
             redisTemplate.delete(k);
